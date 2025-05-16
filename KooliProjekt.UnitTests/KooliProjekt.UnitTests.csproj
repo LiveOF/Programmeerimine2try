@@ -33,7 +33,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\KooliProjekt\KooliProjekt.csproj" />
+    <ProjectReference Include="..\WpfApp1\WpfApp1.csproj" />
   </ItemGroup>
 
 </Project>

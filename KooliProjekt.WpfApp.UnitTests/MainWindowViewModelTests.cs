@@ -1,100 +1,146 @@
-using Xunit;
-using Moq;
-using KooliProjekt.WpfApp;
-using KooliProjekt.WpfApp.Api;
+using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Threading.Tasks;
+using System.Windows;
+using Moq;
+using WpfApp1;
+using Xunit;
 
-public class MainWindowViewModelTests
+namespace KooliProjekt.WpfApp.UnitTests
 {
-    private readonly Mock<IApiClient> _mockApiClient;
-    private readonly MainWindowViewModel _viewModel;
-
-    public MainWindowViewModelTests()
+    public class MainWindowViewModelTests
     {
-        _mockApiClient = new Mock<IApiClient>();
-        _viewModel = new MainWindowViewModel(_mockApiClient.Object);
-    }
+        // Helper method to create a testable ViewModel
+        private MainWindowViewModel CreateViewModel()
+        {
+            return new MainWindowViewModel();
+        }
 
-    [Fact]
-    public void NewCommand_Executes_CreatesNewCategory()
-    {
-        // Act
-        _viewModel.NewCommand.Execute(null);
+        [Fact]
+        public void NewCommand_CanExecuteAlways()
+        {
+            // Arrange
+            var viewModel = CreateViewModel();
 
-        // Assert
-        Assert.NotNull(_viewModel.SelectedItem);
-    }
+            // Act
+            bool canExecute = viewModel.NewCommand.CanExecute(null);
 
-    [Fact]
-    public async Task SaveCommand_Executes_CallsApiClient()
-    {
-        // Arrange
-        var category = new Building { Id = 1, Title = "Test" };
-        _viewModel.SelectedItem = category;
-        _mockApiClient.Setup(api => api.Save(category)).Returns(Task.CompletedTask);
+            // Assert
+            Assert.True(canExecute);
+        }
 
-        // Act
-        _viewModel.SaveCommand.Execute(null);
+        [Fact]
+        public void NewCommand_ExecuteShouldClearSelectedItemAndObjectName()
+        {
+            // Arrange
+            var viewModel = CreateViewModel();
+            viewModel.SelectedItem = new MyObject { Id = 1, Name = "Test Object" };
+            viewModel.ObjectName = "Test Name";
 
-        // Assert
-        _mockApiClient.Verify(api => api.Save(category), Times.Once);
-    }
+            // Act
+            viewModel.NewCommand.Execute(null);
 
-    [Fact]
-    public void SaveCommand_CanExecute_ReturnsFalse_WhenNoItemSelected()
-    {
-        // Arrange
-        _viewModel.SelectedItem = null;
+            // Assert
+            Assert.Null(viewModel.SelectedItem);
+            Assert.Equal(string.Empty, viewModel.ObjectName);
+        }
 
-        // Act
-        bool result = _viewModel.SaveCommand.CanExecute(null);
+        [Fact]
+        public void AddCommand_CanExecuteWhenObjectNameIsNotEmpty()
+        {
+            // Arrange
+            var viewModel = CreateViewModel();
 
-        // Assert
-        Assert.False(result);
-    }
+            // Act - Empty name scenario
+            viewModel.ObjectName = "";
+            bool canExecuteEmpty = viewModel.AddCommand.CanExecute(null);
 
-    [Fact]
-    public async Task Load_FillsLists()
-    {
-        // Arrange
-        var categories = new List<Building> { new Building { Id = 1, Title = "Test" } };
-        _mockApiClient.Setup(api => api.List()).ReturnsAsync(categories);
+            // Act - With name scenario
+            viewModel.ObjectName = "Test Object";
+            bool canExecuteWithName = viewModel.AddCommand.CanExecute(null);
 
-        // Act
-        await _viewModel.Load();
+            // Assert
+            Assert.False(canExecuteEmpty);
+            Assert.True(canExecuteWithName);
+        }
 
-        // Assert
-        Assert.Single(_viewModel.Lists);
-    }
+        [Fact]
+        public void SaveCommand_CanExecuteWhenItemSelectedAndNameNotEmpty()
+        {
+            // Arrange
+            var viewModel = CreateViewModel();
 
-    [Fact]
-    public void ConfirmDelete_ReturnsTrue_WhenPredicateAllows()
-    {
-        // Arrange
-        var category = new Building();
-        _viewModel.SelectedItem = category;
-        _viewModel.ConfirmDelete = item => true;
+            // Act - No selection scenario
+            viewModel.SelectedItem = null;
+            viewModel.ObjectName = "Test";
+            bool canExecuteNoSelection = viewModel.SaveCommand.CanExecute(null);
 
-        // Act
-        bool canDelete = _viewModel.ConfirmDelete(category);
+            // Act - With selection but empty name
+            viewModel.SelectedItem = new MyObject { Id = 1, Name = "" };
+            viewModel.ObjectName = "";
+            bool canExecuteEmptyName = viewModel.SaveCommand.CanExecute(null);
 
-        // Assert
-        Assert.True(canDelete);
-    }
+            // Act - With selection and name
+            viewModel.SelectedItem = new MyObject { Id = 1, Name = "Test" };
+            viewModel.ObjectName = "Test Updated";
+            bool canExecuteValid = viewModel.SaveCommand.CanExecute(null);
 
-    [Fact]
-    public void ConfirmDelete_ReturnsFalse_WhenPredicateDenies()
-    {
-        // Arrange
-        var category = new Building();
-        _viewModel.SelectedItem = category;
-        _viewModel.ConfirmDelete = item => false;
+            // Assert
+            Assert.False(canExecuteNoSelection);
+            Assert.False(canExecuteEmptyName);
+            Assert.True(canExecuteValid);
+        }
 
-        // Act
-        bool canDelete = _viewModel.ConfirmDelete(category);
+        [Fact]
+        public void DeleteCommand_CanExecuteWhenItemSelected()
+        {
+            // Arrange
+            var viewModel = CreateViewModel();
 
-        // Assert
-        Assert.False(canDelete);
+            // Act - No selection scenario
+            viewModel.SelectedItem = null;
+            bool canExecuteNoSelection = viewModel.DeleteCommand.CanExecute(null);
+
+            // Act - With selection scenario
+            viewModel.SelectedItem = new MyObject { Id = 1, Name = "Test" };
+            bool canExecuteWithSelection = viewModel.DeleteCommand.CanExecute(null);
+
+            // Assert
+            Assert.False(canExecuteNoSelection);
+            Assert.True(canExecuteWithSelection);
+        }
+
+        [Fact]
+        public void SelectedItem_ChangeShouldUpdateObjectName()
+        {
+            // Arrange
+            var viewModel = CreateViewModel();
+            var testObject = new MyObject { Id = 1, Name = "Test Object" };
+
+            // Act
+            viewModel.SelectedItem = testObject;
+
+            // Assert
+            Assert.Equal("Test Object", viewModel.ObjectName);
+        }
+
+        [Fact]
+        public void IsItemSelected_ShouldReflectSelectedItemStatus()
+        {
+            // Arrange
+            var viewModel = CreateViewModel();
+
+            // Act - No selection
+            viewModel.SelectedItem = null;
+            bool isSelectedWhenNull = viewModel.IsItemSelected;
+
+            // Act - With selection
+            viewModel.SelectedItem = new MyObject { Id = 1, Name = "Test" };
+            bool isSelectedWithObject = viewModel.IsItemSelected;
+
+            // Assert
+            Assert.False(isSelectedWhenNull);
+            Assert.True(isSelectedWithObject);
+        }
     }
 }

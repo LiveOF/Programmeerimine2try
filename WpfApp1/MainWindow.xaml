@@ -5,24 +5,58 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:WpfApp1"
         mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800">
-    <Grid>
-        <!-- ListBox для отображения объектов -->
-        <ListBox Name="ObjectListBox" HorizontalAlignment="Left" Height="200" Margin="10,10,0,0" VerticalAlignment="Top" Width="760" />
+        Title="Object Manager" Height="450" Width="800">
 
-        <!-- Кнопка для загрузки данных -->
-        <Button Name="LoadButton" Content="Load Data" HorizontalAlignment="Left" VerticalAlignment="Top" Width="100" Height="30" Margin="10,220,0,0" Click="LoadButton_Click"/>
+    <Window.Resources>
+        <Style TargetType="Button">
+            <Setter Property="Margin" Value="5"/>
+            <Setter Property="Padding" Value="10,5"/>
+            <Setter Property="MinWidth" Value="80"/>
+        </Style>
+    </Window.Resources>
 
-        <!-- Кнопка для добавления нового объекта -->
-        <Button Name="AddButton" Content="Add Object" HorizontalAlignment="Left" VerticalAlignment="Top" Width="100" Height="30" Margin="120,220,0,0" Click="AddButton_Click"/>
+    <Window.DataContext>
+        <local:MainWindowViewModel/>
+    </Window.DataContext>
 
-        <!-- Кнопка для удаления выбранного объекта -->
-        <Button Name="DeleteButton" Content="Delete Object" HorizontalAlignment="Left" VerticalAlignment="Top" Width="100" Height="30" Margin="230,220,0,0" Click="DeleteButton_Click"/>
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="250"/>
+        </Grid.ColumnDefinitions>
 
-        <!-- Кнопка для сохранения изменений -->
-        <Button Name="SaveButton" Content="Save Object" HorizontalAlignment="Left" VerticalAlignment="Top" Width="100" Height="30" Margin="340,220,0,0" Click="SaveButton_Click"/>
+        <!-- Objects List -->
+        <ListBox Grid.Row="0" Grid.RowSpan="2" Grid.Column="0"
+                 Margin="0,0,10,0" 
+                 ItemsSource="{Binding Objects}" 
+                 SelectedItem="{Binding SelectedItem, Mode=TwoWay}"
+                 DisplayMemberPath="Name"/>
 
-        <!-- TextBox для ввода имени объекта -->
-        <TextBox Name="ObjectNameTextBox" HorizontalAlignment="Left" Height="30" Margin="10,260,0,0" VerticalAlignment="Top" Width="760"/>
+        <!-- Object Details -->
+        <StackPanel Grid.Row="0" Grid.Column="1">
+            <TextBlock Text="Object Name:" Margin="0,5,0,5"/>
+            <TextBox Text="{Binding ObjectName, UpdateSourceTrigger=PropertyChanged}" 
+                     Margin="0,0,0,10" 
+                     Padding="5"/>
+        </StackPanel>
+
+        <!-- Action Buttons -->
+        <StackPanel Grid.Row="1" Grid.Column="1" VerticalAlignment="Bottom">
+            <Button Content="New" Command="{Binding NewCommand}"/>
+            <Button Content="Add" Command="{Binding AddCommand}"/>
+            <Button Content="Save" Command="{Binding SaveCommand}"/>
+            <Button Content="Delete" Command="{Binding DeleteCommand}"/>
+            <Button Content="Reload" Command="{Binding LoadCommand}"/>
+        </StackPanel>
+
+        <!-- Status Bar -->
+        <StatusBar Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,10,0,0">
+            <TextBlock Text="Ready" Margin="5"/>
+        </StatusBar>
     </Grid>
 </Window>
