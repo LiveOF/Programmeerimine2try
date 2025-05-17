@@ -5,29 +5,64 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:KooliProjekt.WpfApp"
         mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800">
-    <Grid>
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="400"></ColumnDefinition>
-            <ColumnDefinition Width="400"></ColumnDefinition>
-        </Grid.ColumnDefinitions>
-        <DataGrid 
-            x:Name="TodoListsGrid" 
-            d:ItemsSource="{d:SampleData ItemCount=10}"
-            ItemsSource="{Binding Lists}"
-            SelectedItem="{Binding SelectedList}"
-        />
+        Title="Building Manager" Height="450" Width="800">
 
-        <StackPanel Grid.Column="1" Orientation="Vertical" Margin="10">
-            <TextBlock>ID</TextBlock>
-            <TextBlock Text="{Binding SelectedList.Id}"></TextBlock>
-            <TextBlock>Title</TextBlock>
-            <TextBox Text="{Binding SelectedList.Title}"></TextBox>
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                <Button Margin="5">New</Button>
-                <Button Margin="5" Command="{Binding SaveCommand}">Save</Button>
-                <Button Margin="5" Command="{Binding DeleteCommand}">Delete</Button>
-            </StackPanel>
+    <Window.Resources>
+        <Style TargetType="Button">
+            <Setter Property="Margin" Value="5"/>
+            <Setter Property="Padding" Value="10,5"/>
+            <Setter Property="MinWidth" Value="80"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="300"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- Buildings List -->
+        <DataGrid Grid.Row="0" Grid.RowSpan="2" Grid.Column="0"
+                 Margin="0,0,10,0" 
+                 ItemsSource="{Binding Buildings}" 
+                 SelectedItem="{Binding SelectedItem, Mode=TwoWay}"
+                 AutoGenerateColumns="False"
+                 IsReadOnly="True">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="50"/>
+                <DataGridTextColumn Header="Location" Binding="{Binding Location}" Width="*"/>
+                <DataGridTextColumn Header="Date" Binding="{Binding Date, StringFormat=dd.MM.yyyy}" Width="100"/>
+            </DataGrid.Columns>
+        </DataGrid>
+
+        <!-- Building Details -->
+        <StackPanel Grid.Row="0" Grid.Column="1">
+            <TextBlock Text="ID:" Margin="0,5,0,5"/>
+            <TextBox Text="{Binding SelectedItem.Id}" IsReadOnly="True" Margin="0,0,0,10" Padding="5"/>
+
+            <TextBlock Text="Location:" Margin="0,5,0,5"/>
+            <TextBox Text="{Binding Location, UpdateSourceTrigger=PropertyChanged}" 
+                     Margin="0,0,0,10" Padding="5"/>
+
+            <TextBlock Text="Title:" Margin="0,5,0,5"/>
+            <TextBox Text="{Binding Title, UpdateSourceTrigger=PropertyChanged}" 
+                     Margin="0,0,0,10" Padding="5"/>
+
+            <TextBlock Text="Date:" Margin="0,5,0,5"/>
+            <DatePicker SelectedDate="{Binding Date}" Margin="0,0,0,10"/>
+        </StackPanel>
+
+        <!-- Action Buttons -->
+        <StackPanel Grid.Row="1" Grid.Column="1" VerticalAlignment="Bottom">
+            <Button Content="New Building" Command="{Binding NewCommand}"/>
+            <Button Content="Save" Command="{Binding SaveCommand}"/>
+            <Button Content="Delete" Command="{Binding DeleteCommand}"/>
+            <Button Content="Reload" Command="{Binding LoadCommand}"/>
         </StackPanel>
     </Grid>
 </Window>

@@ -1,50 +1,78 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Json;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace KooliProjekt.WpfApp.Api
 {
-    public class ApiClient : IApiClient, IDisposable
+    public class ApiClient : IApiClient
     {
         private readonly HttpClient _httpClient;
+        private readonly string _baseUrl;
 
-        public ApiClient()
+        public ApiClient(string baseUrl)
         {
+            _baseUrl = baseUrl;
             _httpClient = new HttpClient();
-            _httpClient.BaseAddress = new Uri("https://localhost:7136/api/Buildings/");
+            _httpClient.BaseAddress = new Uri(baseUrl);
         }
 
         public async Task<IList<Building>> List()
         {
-            var result = await _httpClient.GetFromJsonAsync<List<Building>>("");
-
-            return result;
+            var response = await _httpClient.GetFromJsonAsync<List<Building>>("api/Buildings");
+            return response;
         }
 
-        public async Task Save(Building list)
+        public async Task<Result> Save(Building building)
         {
-            if(list.Id == 0)
+            try
             {
-                await _httpClient.PostAsJsonAsync("", list);
+                HttpResponseMessage response;
+                if (building.Id == 0)
+                {
+                    response = await _httpClient.PostAsJsonAsync("api/Buildings", building);
+                }
+                else
+                {
+                    response = await _httpClient.PutAsJsonAsync($"api/Buildings/{building.Id}", building);
+                }
+
+                if (response.IsSuccessStatusCode)
+                {
+                    return Result.Success();
+                }
+                else
+                {
+                    var error = await response.Content.ReadAsStringAsync();
+                    return Result.Failure(error);
+                }
             }
-            else
+            catch (Exception ex)
             {
-                await _httpClient.PutAsJsonAsync(list.Id.ToString(), list);
+                return Result.Failure(ex.Message);
             }
         }
 
-        public async Task Delete(int id)
+        public async Task<Result> Delete(int id)
         {
-            await _httpClient.DeleteAsync(id.ToString());
-        }
-
-        public void Dispose()
-        {
-            _httpClient.Dispose();
+            try
+            {
+                var response = await _httpClient.DeleteAsync($"api/Buildings/{id}");
+                if (response.IsSuccessStatusCode)
+                {
+                    return Result.Success();
+                }
+                else
+                {
+                    var error = await response.Content.ReadAsStringAsync();
+                    return Result.Failure(error);
+                }
+            }
+            catch (Exception ex)
+            {
+                return Result.Failure(ex.Message);
+            }
         }
     }
 }

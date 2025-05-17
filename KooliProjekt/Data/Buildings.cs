@@ -10,9 +10,9 @@ namespace KooliProjekt.Data
 
 
         public IdentityUser User { get; set; }
-        public string UserId { get; set; }
+        public string? UserId { get; set; }
 
-      
+
         public DateTime Date { get; set; }
 
         public string Location { get; set; }

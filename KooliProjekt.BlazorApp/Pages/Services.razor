@@ -1,0 +1,122 @@
+﻿@page "/services"
+@inject IApiClient apiClient
+@inject IJSRuntime JsRuntime
+@inject NavigationManager NavManager
+
+<PageTitle>Services</PageTitle>
+
+<div class="container-fluid mt-3">
+    <div class="row">
+        <div class="col-md-8">
+            <h1>Services</h1>
+            <p>List of services from the database</p>
+        </div>
+        <div class="col-md-4 d-flex justify-content-end align-items-center">
+            <a class="btn btn-primary" href="/service/create">
+                <i class="oi oi-plus"></i> Add
+            </a>
+        </div>
+    </div>
+
+    <div class="row mt-3">
+        <div class="col-12">
+            @if (services == null)
+            {
+                <div class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2">Loading data...</p>
+                </div>
+            }
+            else if (services.Count == 0)
+            {
+                <div class="alert alert-info">
+                    <i class="oi oi-info me-2"></i>
+                    No services available. <a href="/service/create">Add new service</a>
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>ID</th>
+                                <th>Name</th>
+                                <th>Description</th>
+                                <th>Price</th>
+                                <th>Building ID</th>
+                                <th class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var service in services)
+                            {
+                                <tr>
+                                    <td>@service.Id</td>
+                                    <td>@service.Title</td>
+                                    <td>@service.Description</td>
+                                    <td>@service.Price.ToString("F2")</td>
+                                    <td>@service.BuildingId</td>
+                                    <td class="text-end">
+                                        <div class="btn-group">
+                                            <a href="/service/edit/@service.Id" class="btn btn-sm btn-outline-primary" title="Edit">
+                                                <i class="oi oi-pencil"></i> <span class="d-none d-md-inline">Edit</span>
+                                            </a>
+                                            <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteService(service.Id)" title="Delete">
+                                                <i class="oi oi-trash"></i> <span class="d-none d-md-inline">Delete</span>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<Service> services;
+    private string errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadServices();
+    }
+
+    private async Task LoadServices()
+    {
+        try
+        {
+            var result = await apiClient.ListServices();
+            if (result.Value != null)
+            {
+                services = result.Value;
+            }
+            else
+            {
+                services = new List<Service>();
+                errorMessage = "Failed to load data";
+            }
+        }
+        catch (Exception ex)
+        {
+            services = new List<Service>();
+            errorMessage = $"Error: {ex.Message}";
+        }
+    }
+
+    private async Task DeleteService(int id)
+    {
+        bool confirmed = await JsRuntime.InvokeAsync<bool>("confirm", "Are you sure you want to delete this service?");
+        if (confirmed)
+        {
+            await apiClient.DeleteService(id);
+            await LoadServices();
+        }
+    }
+}

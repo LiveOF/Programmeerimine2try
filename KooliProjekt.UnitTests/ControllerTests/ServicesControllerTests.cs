@@ -21,7 +21,8 @@ namespace KooliProjekt.UnitTests.ControllerTests
         public ServicesControllerTests()
         {
             _servicesServiceMock = new Mock<IServicesService>();
-            _controller = new ServicesController(_servicesServiceMock.Object);
+            var buildingServiceMock = new Mock<IBuildingsService>();
+            _controller = new ServicesController(_servicesServiceMock.Object, buildingServiceMock.Object);
         }
 
         [Fact]
@@ -43,12 +44,11 @@ namespace KooliProjekt.UnitTests.ControllerTests
                 RowCount = 2
             };
             _servicesServiceMock
-                .Setup(x => x.List(page, It.IsAny<int>(),null))
+                .Setup(x => x.List(page, It.IsAny<int>(), null))
                 .ReturnsAsync(pagedResult);
 
             // Act
             var result = await _controller.Index(page) as ViewResult;
-            var model = result.Model as ServicesIndexModel;
 
             // Assert
             Assert.NotNull(result);
@@ -56,7 +56,10 @@ namespace KooliProjekt.UnitTests.ControllerTests
                 string.IsNullOrEmpty(result.ViewName) ||
                 result.ViewName == "Index"
             );
-            Assert.Equal(pagedResult,model.Data);
+
+            var model = result.Model as ServicesIndexModel;
+            Assert.NotNull(model);
+            Assert.Equal(pagedResult, model.Data);
         }
 
         [Fact]
@@ -77,10 +80,10 @@ namespace KooliProjekt.UnitTests.ControllerTests
         {
             // Arrange
             int? id = 1;
-            var Service = (Service)null;
+            Service? service = null;
             _servicesServiceMock
                 .Setup(x => x.Get(id.Value))
-                .ReturnsAsync(Service);
+                .ReturnsAsync(service);
 
             // Act
             var result = await _controller.Details(id) as NotFoundResult;
@@ -94,10 +97,10 @@ namespace KooliProjekt.UnitTests.ControllerTests
         {
             // Arrange
             int? id = 1;
-            var Service = new Service { Id = id.Value, Title = "Test 1" };
+            var service = new Service { Id = id.Value, Title = "Test 1" };
             _servicesServiceMock
                 .Setup(x => x.Get(id.Value))
-                .ReturnsAsync(Service);
+                .ReturnsAsync(service);
 
             // Act
             var result = await _controller.Details(id) as ViewResult;
@@ -108,16 +111,16 @@ namespace KooliProjekt.UnitTests.ControllerTests
                 string.IsNullOrEmpty(result.ViewName) ||
                 result.ViewName == "Details"
             );
-            Assert.Equal(Service, result.Model);
+            Assert.Equal(service, result.Model);
         }
 
         [Fact]
-        public void Create_should_return_correct_view()
+        public async Task Create_should_return_correct_view()
         {
             // Arrange
 
             // Act
-            var result = _controller.Create() as ViewResult;
+            var result = await _controller.Create() as ViewResult;
 
             // Assert
             Assert.NotNull(result);
@@ -145,10 +148,10 @@ namespace KooliProjekt.UnitTests.ControllerTests
         {
             // Arrange
             int? id = 1;
-            var Service = (Service)null;
+            Service? service = null;
             _servicesServiceMock
                 .Setup(x => x.Get(id.Value))
-                .ReturnsAsync(Service);
+                .ReturnsAsync(service);
 
             // Act
             var result = await _controller.Delete(id) as NotFoundResult;
@@ -162,10 +165,10 @@ namespace KooliProjekt.UnitTests.ControllerTests
         {
             // Arrange
             int? id = 1;
-            var Service = new Service { Id = id.Value, Title = "Test 1" };
+            var service = new Service { Id = id.Value, Title = "Test 1" };
             _servicesServiceMock
                 .Setup(x => x.Get(id.Value))
-                .ReturnsAsync(Service);
+                .ReturnsAsync(service);
 
             // Act
             var result = await _controller.Delete(id) as ViewResult;
@@ -176,7 +179,7 @@ namespace KooliProjekt.UnitTests.ControllerTests
                 string.IsNullOrEmpty(result.ViewName) ||
                 result.ViewName == "Delete"
             );
-            Assert.Equal(Service, result.Model);
+            Assert.Equal(service, result.Model);
         }
         [Fact]
         public async Task DeleteConfirmed_should_delete_list()
@@ -185,7 +188,7 @@ namespace KooliProjekt.UnitTests.ControllerTests
             int id = 1;
             _servicesServiceMock
                 .Setup(x => x.Delete(id))
-        .Verifiable();
+                .Verifiable();
 
             // Act
             var result = await _controller.DeleteConfirmed(id) as RedirectToActionResult;

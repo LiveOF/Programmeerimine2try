@@ -1,0 +1,120 @@
+﻿@page "/panels"
+@inject IApiClient apiClient
+@inject IJSRuntime JsRuntime
+@inject NavigationManager NavManager
+
+<PageTitle>Panels</PageTitle>
+
+<div class="container-fluid mt-3">
+    <div class="row">
+        <div class="col-md-8">
+            <h1>Panels</h1>
+            <p>List of panels from the database</p>
+        </div>
+        <div class="col-md-4 d-flex justify-content-end align-items-center">
+            <a class="btn btn-primary" href="/panel/create">
+                <i class="oi oi-plus"></i> Add
+            </a>
+        </div>
+    </div>
+
+    <div class="row mt-3">
+        <div class="col-12">
+            @if (panels == null)
+            {
+                <div class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2">Loading data...</p>
+                </div>
+            }
+            else if (panels.Count == 0)
+            {
+                <div class="alert alert-info">
+                    <i class="oi oi-info me-2"></i>
+                    No panels available. <a href="/panel/create">Add new panel</a>
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>ID</th>
+                                <th>Name</th>
+                                <th>Description</th>
+                                <th>Cost</th>
+                                <th class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var panel in panels)
+                            {
+                                <tr>
+                                    <td>@panel.Id</td>
+                                    <td>@panel.Title</td>
+                                    <td>@panel.Description</td>
+                                    <td>@panel.Cost.ToString("F2")</td>
+                                    <td class="text-end">
+                                        <div class="btn-group">
+                                            <a href="/panel/edit/@panel.Id" class="btn btn-sm btn-outline-primary" title="Edit">
+                                                <i class="oi oi-pencil"></i> <span class="d-none d-md-inline">Edit</span>
+                                            </a>
+                                            <button class="btn btn-sm btn-outline-danger" @onclick="() => DeletePanel(panel.Id)" title="Delete">
+                                                <i class="oi oi-trash"></i> <span class="d-none d-md-inline">Delete</span>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<Panel> panels;
+    private string errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadPanels();
+    }
+
+    private async Task LoadPanels()
+    {
+        try
+        {
+            var result = await apiClient.ListPanels();
+            if (result.Value != null)
+            {
+                panels = result.Value;
+            }
+            else
+            {
+                panels = new List<Panel>();
+                errorMessage = "Failed to load data";
+            }
+        }
+        catch (Exception ex)
+        {
+            panels = new List<Panel>();
+            errorMessage = $"Error: {ex.Message}";
+        }
+    }
+
+    private async Task DeletePanel(int id)
+    {
+        bool confirmed = await JsRuntime.InvokeAsync<bool>("confirm", "Are you sure you want to delete this panel?");
+        if (confirmed)
+        {
+            await apiClient.DeletePanel(id);
+            await LoadPanels();
+        }
+    }
+}

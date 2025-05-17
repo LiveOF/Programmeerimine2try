@@ -1,0 +1,28 @@
+﻿@inherits LayoutComponentBase
+
+<div class="page">
+    <div class="sidebar bg-dark">
+        <NavMenu />
+    </div>
+
+    <main>
+        <div class="top-row px-4 justify-content-between bg-light border-bottom">
+            <div>
+                <span class="fw-bold text-primary">KooliProjekt</span>
+            </div>
+            <div>
+                <a href="https://docs.microsoft.com/aspnet/" target="_blank">Reference</a>
+            </div>
+        </div>
+
+        <article class="content px-4">
+            @Body
+        </article>
+    </main>
+</div>
+
+<div id="blazor-error-ui" class="rounded-3">
+    An application error occurred.
+    <a href="" class="reload">Reboot</a>
+    <a class="dismiss">🗙</a>
+</div>

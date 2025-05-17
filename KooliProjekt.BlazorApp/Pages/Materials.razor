@@ -1,0 +1,120 @@
+﻿@page "/materials"
+@inject IApiClient apiClient
+@inject IJSRuntime JsRuntime
+@inject NavigationManager NavManager
+
+<PageTitle>Materials</PageTitle>
+
+<div class="container-fluid mt-3">
+    <div class="row">
+        <div class="col-md-8">
+            <h1>Materials</h1>
+            <p>List of materials from the database</p>
+        </div>
+        <div class="col-md-4 d-flex justify-content-end align-items-center">
+            <a class="btn btn-primary" href="/material/create">
+                <i class="oi oi-plus"></i> Add
+            </a>
+        </div>
+    </div>
+
+    <div class="row mt-3">
+        <div class="col-12">
+            @if (materials == null)
+            {
+                <div class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2">Loading data...</p>
+                </div>
+            }
+            else if (materials.Count == 0)
+            {
+                <div class="alert alert-info">
+                    <i class="oi oi-info me-2"></i>
+                    No materials available. <a href="/material/create">Add new material</a>
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>ID</th>
+                                <th>Name</th>
+                                <th>Description</th>
+                                <th>Price per unit</th>
+                                <th class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var material in materials)
+                            {
+                                <tr>
+                                    <td>@material.Id</td>
+                                    <td>@material.Title</td>
+                                    <td>@material.Description</td>
+                                    <td>@material.UnitPrice.ToString("F2")</td>
+                                    <td class="text-end">
+                                        <div class="btn-group">
+                                            <a href="/material/edit/@material.Id" class="btn btn-sm btn-outline-primary" title="Edit">
+                                                <i class="oi oi-pencil"></i> <span class="d-none d-md-inline">Edit</span>
+                                            </a>
+                                            <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteMaterial(material.Id)" title="Delete">
+                                                <i class="oi oi-trash"></i> <span class="d-none d-md-inline">Delete</span>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<Material> materials;
+    private string errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadMaterials();
+    }
+
+    private async Task LoadMaterials()
+    {
+        try
+        {
+            var result = await apiClient.ListMaterials();
+            if (result.Value != null)
+            {
+                materials = result.Value;
+            }
+            else
+            {
+                materials = new List<Material>();
+                errorMessage = "Failed to load data";
+            }
+        }
+        catch (Exception ex)
+        {
+            materials = new List<Material>();
+            errorMessage = $"Error: {ex.Message}";
+        }
+    }
+
+    private async Task DeleteMaterial(int id)
+    {
+        bool confirmed = await JsRuntime.InvokeAsync<bool>("confirm", "Are you sure you want to delete this material?");
+        if (confirmed)
+        {
+            await apiClient.DeleteMaterial(id);
+            await LoadMaterials();
+        }
+    }
+}

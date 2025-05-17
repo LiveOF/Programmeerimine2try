@@ -1,102 +1,180 @@
-﻿using KooliProjekt.WpfApp.Api;
+﻿using System;
 using System.Collections.ObjectModel;
+using System.Threading.Tasks;
+using System.Windows;
 using System.Windows.Input;
+using KooliProjekt.WpfApp.Api;
 
 namespace KooliProjekt.WpfApp
 {
     public class MainWindowViewModel : NotifyPropertyChangedBase
     {
         private readonly IApiClient _apiClient;
+        private ObservableCollection<Building> _buildings;
+        private Building _selectedItem;
+        private string _location;
+        private DateTime _date;
+        private string _title;
 
-        public ObservableCollection<Building> Lists { get; private set; }
+        public ObservableCollection<Building> Buildings
+        {
+            get => _buildings;
+            set => SetProperty(ref _buildings, value);
+        }
 
-        public ICommand NewCommand { get; private set; }
+        public Building SelectedItem
+        {
+            get => _selectedItem;
+            set
+            {
+                if (SetProperty(ref _selectedItem, value))
+                {
+                    // Обновить свойства при изменении выбранного элемента
+                    if (value != null)
+                    {
+                        Location = value.Address ?? string.Empty;
+                        Date = value.CreatedAt;
+                        Title = value.Name ?? string.Empty;
+                    }
+                    else
+                    {
+                        Location = string.Empty;
+                        Date = DateTime.Now;
+                        Title = string.Empty;
+                    }
 
+                    OnPropertyChanged(nameof(IsItemSelected));
+                }
+            }
+        }
+
+        public string Location
+        {
+            get => _location;
+            set => SetProperty(ref _location, value);
+        }
+
+        public DateTime Date
+        {
+            get => _date;
+            set => SetProperty(ref _date, value);
+        }
+
+        public string Title
+        {
+            get => _title;
+            set => SetProperty(ref _title, value);
+        }
+
+        public bool IsItemSelected => SelectedItem != null;
+
+        public ICommand LoadCommand { get; private set; }
+        public ICommand AddCommand { get; private set; }
         public ICommand SaveCommand { get; private set; }
         public ICommand DeleteCommand { get; private set; }
-        public Predicate<Building> ConfirmDelete { get; set; }
+        public ICommand NewCommand { get; private set; }
 
-        public MainWindowViewModel() : this(new ApiClient())
-        {
-        }
+        // Делегат для подтверждения удаления
+        public Func<Building, bool> ConfirmDelete { get; set; }
 
         public MainWindowViewModel(IApiClient apiClient)
         {
             _apiClient = apiClient;
+            Buildings = new ObservableCollection<Building>();
+            Date = DateTime.Now;
 
-            Lists = new ObservableCollection<Building>();
+            // Явно делаем асинхронный вызов
+            LoadCommand = new RelayCommand<object>(async _ => await Load());
+            NewCommand = new RelayCommand<object>(_ => CreateNewBuilding());
+            SaveCommand = new RelayCommand<object>(async _ => await SaveAsync(), _ => !string.IsNullOrWhiteSpace(Location));
+            DeleteCommand = new RelayCommand<object>(async _ => await DeleteAsync(), _ => IsItemSelected);
+        }
 
-            NewCommand = new RelayCommand<Building>(
-                // Execute
-                list =>
-                {
-                    SelectedItem = new Building();
-                }
-            );
-
-            SaveCommand = new RelayCommand<Building>(
-                // Execute
-                async list =>
-                {
-                    await _apiClient.Save(SelectedItem);
-                    await Load();
-                },
-                // CanExecute
-                list =>
-                {
-                    return SelectedItem != null;
-                }
-            );
-
-            DeleteCommand = new RelayCommand<Building>(
-                // Execute
-                async list =>
-                {
-                    if (ConfirmDelete != null)
-                    {
-                        var result = ConfirmDelete(SelectedItem);
-                        if (!result)
-                        {
-                            return;
-                        }
-                    }
-
-                    await _apiClient.Delete(SelectedItem.Id);
-                    Lists.Remove(SelectedItem);
-                    SelectedItem = null;
-                },
-                // CanExecute
-                list =>
-                {
-                    return SelectedItem != null;
-                }
-            );
+        private void CreateNewBuilding()
+        {
+            // Создать новое здание
+            SelectedItem = null;
+            Location = string.Empty;
+            Title = string.Empty;
+            Date = DateTime.Now;
         }
 
         public async Task Load()
         {
-            Lists.Clear();
-
-            var lists = await _apiClient.List();
-            foreach (var list in lists)
+            try
             {
-                Lists.Add(list);
+                var buildings = await _apiClient.List();
+
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    Buildings.Clear();
+                    foreach (var building in buildings)
+                    {
+                        Buildings.Add(building);
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка загрузки зданий: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
-        private Building _selectedItem;
-        public Building SelectedItem
+        private async Task SaveAsync()
         {
-            get
+            try
             {
-                return _selectedItem;
+                var building = SelectedItem ?? new Building();
+                building.Address = Location;
+                building.CreatedAt = Date;
+                building.Name = Title;
+                building.UserId = "1";
+
+                var result = await _apiClient.Save(building);
+
+                if (result != null && !result.HasError)
+                {
+                    await Load();
+                }
+                else
+                {
+                    string errorMessage = result?.Error ?? "Неизвестная ошибка";
+                    MessageBox.Show($"Ошибка сохранения: {errorMessage}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
             }
-            set
+            catch (Exception ex)
             {
-                _selectedItem = value;
-                NotifyPropertyChanged();
+                MessageBox.Show($"Ошибка сохранения здания: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private async Task DeleteAsync()
+        {
+            if (SelectedItem == null)
+                return;
+
+            if (ConfirmDelete == null || ConfirmDelete(SelectedItem))
+            {
+                try
+                {
+                    var result = await _apiClient.Delete(SelectedItem.Id);
+
+                    if (result != null && !result.HasError)
+                    {
+                        await Load();
+                        SelectedItem = null;
+                    }
+                    else
+                    {
+                        string errorMessage = result?.Error ?? "Неизвестная ошибка";
+                        MessageBox.Show($"Ошибка удаления: {errorMessage}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Ошибка удаления здания: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
             }
         }
     }
 }
-

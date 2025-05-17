@@ -27,7 +27,7 @@ namespace KooliProjekt
             builder.Services.AddScoped<IPanelsService, PanelsService>();
             builder.Services.AddScoped<IServicesService, ServicesService>();
             builder.Services.AddScoped<IPanelMaterialsService, PanelMaterialsService>();
-
+            builder.Services.AddCors();
 
             var app = builder.Build();
 
@@ -45,6 +45,11 @@ namespace KooliProjekt
 
             app.UseHttpsRedirection();
             app.UseStaticFiles();
+            app.UseCors(
+                options => options.AllowAnyOrigin()
+                .AllowAnyMethod()
+                .AllowAnyHeader()
+);
 
             app.UseRouting();
 

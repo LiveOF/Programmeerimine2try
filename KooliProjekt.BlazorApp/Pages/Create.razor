@@ -1,0 +1,101 @@
+﻿@page "/create"
+
+@inject IApiClient apiClient
+@inject NavigationManager NavManager
+@inject IJSRuntime JsRuntime
+
+<PageTitle>Create</PageTitle>
+
+<div class="container-fluid mt-3">
+    <div class="row">
+        <div class="col">
+            <h1>Add new building</h1>
+        </div>
+    </div>
+
+    @if (errorMessage != null)
+    {
+        <div class="alert alert-danger">
+            <i class="oi oi-warning me-2"></i> @errorMessage
+        </div>
+    }
+
+    <EditForm Model="building" OnValidSubmit="HandleValidSubmit">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="row">
+            <div class="col-md-8">
+                <div class="form-group mb-3">
+                    <label for="location">Location</label>
+                    <InputText id="location" @bind-Value="building.Location" class="form-control" />
+                </div>
+
+                <div class="form-group mb-3">
+                    <label for="date">Date</label>
+                    <InputDate id="date" @bind-Value="building.Date" class="form-control" />
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="d-flex flex-column gap-2 mt-4">
+                    <button type="submit" class="btn btn-primary" disabled="@isSaving">
+                        @if (isSaving)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                            <span>Saving...</span>
+                        }
+                        else
+                        {
+                            <span>Save</span>
+                        }
+                    </button>
+                    <a href="/" class="btn btn-secondary">Cancel</a>
+                </div>
+            </div>
+        </div>
+    </EditForm>
+</div>
+
+@code {
+    private Building building = new Building { Date = DateTime.Today };
+    private bool isSaving = false;
+    private string? errorMessage = null;
+
+    private async Task HandleValidSubmit()
+    {
+        try
+        {
+            isSaving = true;
+            errorMessage = null;
+            StateHasChanged();
+
+            // Set current user for new building
+            building.UserId = "1"; // Placeholder
+
+            Console.WriteLine($"Submitting building: {System.Text.Json.JsonSerializer.Serialize(building)}");
+
+            var result = await apiClient.Save(building);
+
+            if (result.HasError)
+            {
+                errorMessage = "Error saving the building. Please check the entered data.";
+                await JsRuntime.InvokeVoidAsync("console.error", "Save error:", result.Errors);
+            }
+            else
+            {
+                NavManager.NavigateTo("/");
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"An error occurred: {ex.Message}";
+            await JsRuntime.InvokeVoidAsync("console.error", "Save exception:", ex.Message);
+        }
+        finally
+        {
+            isSaving = false;
+            StateHasChanged();
+        }
+    }
+}

@@ -1,0 +1,55 @@
+﻿@page "/edit/{Id:int}"
+
+@inject IApiClient apiClient
+@inject NavigationManager NavManager
+
+<PageTitle>Edit</PageTitle>
+
+<h1>Edit Building</h1>
+
+@if (building == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <EditForm Model="building" OnValidSubmit="HandleValidSubmit">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="form-group">
+            <label for="location">Location</label>
+            <InputText id="location" @bind-Value="building.Location" class="form-control" />
+        </div>
+
+        <div class="form-group">
+            <label for="date">Date</label>
+            <InputDate id="date" @bind-Value="building.Date" class="form-control" />
+        </div>
+
+        <button type="submit" class="btn btn-primary mt-2">Save</button>
+        <a href="/" class="btn btn-secondary mt-2">Cancel</a>
+    </EditForm>
+}
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    private Building building;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var result = await apiClient.Get(Id);
+        building = result.Value;
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        var result = await apiClient.Save(building);
+        if (!result.HasError)
+        {
+            NavManager.NavigateTo("/");
+        }
+    }
+}

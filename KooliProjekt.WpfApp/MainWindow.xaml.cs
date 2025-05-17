@@ -13,19 +13,21 @@ namespace KooliProjekt.WpfApp
             InitializeComponent();
 
             Loaded += MainWindow_Loaded;
-
         }
 
         private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
-            var viewModel = new MainWindowViewModel(new ApiClient());
+            // Provide the required "baseUrl" argument to the ApiClient constructor
+            var apiClient = new ApiClient("https://localhost:7136");
+            var viewModel = new MainWindowViewModel(apiClient);
+
             viewModel.ConfirmDelete = list =>
             {
                 var result = MessageBox.Show(
                     "Are you sure you want to delete selected list?",
                     "Delete list",
                     MessageBoxButton.YesNo
-                    );
+                );
 
                 return result == MessageBoxResult.Yes;
             };

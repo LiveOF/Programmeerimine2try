@@ -1,0 +1,196 @@
+﻿@page "/service/create"
+@page "/service/edit/{Id:int}"
+
+@inject IApiClient apiClient
+@inject NavigationManager NavManager
+@inject IJSRuntime JsRuntime
+
+<PageTitle>@(Id == 0 ? "New Service" : "Edit Service")</PageTitle>
+
+<div class="container-fluid mt-3">
+    <div class="row">
+        <div class="col">
+            <h1>@(Id == 0 ? "Create new service" : "Edit service")</h1>
+        </div>
+    </div>
+
+    @if (errorMessage != null)
+    {
+        <div class="alert alert-danger">
+            <i class="oi oi-warning me-2"></i> @errorMessage
+        </div>
+    }
+
+    @if (service != null)
+    {
+        <EditForm Model="service" OnValidSubmit="HandleValidSubmit">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
+
+            <div class="row">
+                <div class="col-md-8">
+                    <div class="form-group mb-3">
+                        <label for="title">Name</label>
+                        <InputText id="title" @bind-Value="service.Title" class="form-control" />
+                        <ValidationMessage For="@(() => service.Title)" />
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label for="description">Description</label>
+                        <InputTextArea id="description" @bind-Value="service.Description" class="form-control" rows="3" />
+                        <ValidationMessage For="@(() => service.Description)" />
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label for="price">Price</label>
+                        <InputNumber id="price" @bind-Value="service.Price" class="form-control" />
+                        <ValidationMessage For="@(() => service.Price)" />
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label for="buildingId">Building</label>
+                        @if (buildings == null)
+                        {
+                            <div class="spinner-border spinner-border-sm" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <span class="ms-2">Loading buildings...</span>
+                        }
+                        else if (buildings.Count == 0)
+                        {
+                            <div class="alert alert-warning mt-2">
+                                <i class="oi oi-warning me-2"></i> No buildings available.
+                            </div>
+                        }
+                        else
+                        {
+                            <InputSelect id="buildingId" @bind-Value="service.BuildingId" class="form-control">
+                                <option value="0">-- Select a building --</option>
+                                @foreach (var building in buildings)
+                                {
+                                    <option value="@building.Id">
+                                        @building.Id - @(string.IsNullOrEmpty(building.Location) ? "No name" : building.Location)
+                                    </option>
+                                }
+                            </InputSelect>
+                            <ValidationMessage For="@(() => service.BuildingId)" />
+                        }
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="d-flex flex-column gap-2 mt-4">
+                        <button type="submit" class="btn btn-primary" disabled="@isSaving">
+                            @if (isSaving)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                <span>Saving...</span>
+                            }
+                            else
+                            {
+                                <i class="oi oi-check me-2"></i>
+                                <span>Save</span>
+                            }
+                        </button>
+                        <a href="/services" class="btn btn-outline-secondary">
+                            <i class="oi oi-x me-2"></i>
+                            <span>Cancel</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </EditForm>
+    }
+    else
+    {
+        <div class="text-center">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2">Loading data...</p>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    private Service service;
+    private List<Building> buildings;
+    private bool isSaving = false;
+    private string errorMessage = null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Загружаем список зданий
+        try
+        {
+            var buildingsResult = await apiClient.List();
+            if (!buildingsResult.HasError)
+            {
+                buildings = buildingsResult.Value;
+            }
+            else
+            {
+                buildings = new List<Building>();
+                errorMessage = "Error loading buildings";
+            }
+        }
+        catch (Exception ex)
+        {
+            buildings = new List<Building>();
+        }
+
+        // Загружаем сервис, если это редактирование
+        if (Id > 0)
+        {
+            var result = await apiClient.GetService(Id);
+            if (result.Value != null)
+            {
+                service = result.Value;
+            }
+            else
+            {
+                errorMessage = "Service not found";
+                service = new Service();
+            }
+        }
+        else
+        {
+            service = new Service();
+        }
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        try
+        {
+            isSaving = true;
+            errorMessage = null;
+            StateHasChanged();
+
+            var result = await apiClient.SaveService(service);
+
+            if (result.HasError)
+            {
+                errorMessage = "Error saving service. Please check the entered data.";
+                await JsRuntime.InvokeVoidAsync("console.error", "Save error:", result.Errors);
+            }
+            else
+            {
+                NavManager.NavigateTo("/services");
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"An error occurred: {ex.Message}";
+            await JsRuntime.InvokeVoidAsync("console.error", "Save exception:", ex.Message);
+        }
+        finally
+        {
+            isSaving = false;
+            StateHasChanged();
+        }
+    }
+}

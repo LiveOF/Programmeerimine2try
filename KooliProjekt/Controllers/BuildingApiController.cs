@@ -1,79 +1,108 @@
 ﻿using KooliProjekt.Data;
-using KooliProjekt.Services;
 using Microsoft.AspNetCore.Mvc;
-
-// For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
+using System.Collections.Generic;
+using System.Linq;
+using System.Security.Claims;
+using System.Threading.Tasks;
 
 namespace KooliProjekt.Controllers
 {
-    [Route("api/Buildings")]
+    [Route("api/Building")]
     [ApiController]
-    public class BuildingsApiController : ControllerBase
+    public class BuildingApiController : ControllerBase
     {
-        private readonly IBuildingsService _service;
+        private readonly ApplicationDbContext _context;
 
-        public BuildingsApiController(IBuildingsService service)
+        public BuildingApiController(ApplicationDbContext context)
         {
-            _service = service;
+            _context = context;
         }
 
-        // GET: api/<TodoListsApiController>
+        // GET: api/Building
         [HttpGet]
-        public async Task<IEnumerable<Building>> Get()
+        public IActionResult Get()
         {
-            var result = await _service.List(1, 10000, null);
-            return result.Results;
+            var buildings = _context.Building.ToList();
+            return Ok(buildings);
         }
 
-        // GET api/<TodoListsApiController>/5
+        // GET: api/Building/5
         [HttpGet("{id}")]
-        public async Task<object> Get(int id)
+        public IActionResult Get(int id)
         {
-            var list = await _service.Get(id);
-            if (list == null)
+            var building = _context.Building.Find(id);
+            if (building == null)
             {
                 return NotFound();
             }
-
-            return list;
+            return Ok(building);
         }
 
-        // POST api/<TodoListsApiController>
+        // POST: api/Building
         [HttpPost]
-        public async Task<object> Post([FromBody] Building list)
+        public IActionResult Post([FromBody] Building building)
         {
-            await _service.Save(list);
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
 
-            return Ok(list);
+            building.Id = 0; // Обнуляем ID для автоинкремента
+
+            // Всегда устанавливаем null для UserId
+            building.UserId = null;
+
+            _context.Building.Add(building);
+            _context.SaveChanges();
+
+            return CreatedAtAction(nameof(Get), new { id = building.Id }, building);
         }
 
-        // PUT api/<TodoListsApiController>/5
+        // PUT: api/Building/5
         [HttpPut("{id}")]
-        public async Task<IActionResult> Put(int id, [FromBody] Building list)
+        public IActionResult Put(int id, [FromBody] Building building)
         {
-            if (id != list.Id)
+            if (id != building.Id)
             {
                 return BadRequest();
             }
 
-            await _service.Save(list);
-
-            return Ok();
-        }
-
-        // DELETE api/<TodoListsApiController>/5
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> Delete(int id)
-        {
-            var list = await _service.Get(id);
-            if (list == null)
+            var existingBuilding = _context.Building.Find(id);
+            if (existingBuilding == null)
             {
                 return NotFound();
             }
 
-            await _service.Delete(id);
+            existingBuilding.Location = building.Location;
+            existingBuilding.Date = building.Date;
+            existingBuilding.UserId = building.UserId;
 
-            return Ok();
+            _context.SaveChanges();
+
+            return NoContent();
+        }
+
+        // DELETE: api/Building/5
+        [HttpDelete("{id}")]
+        public IActionResult Delete(int id)
+        {
+            var building = _context.Building.Find(id);
+            if (building == null)
+            {
+                return NotFound();
+            }
+
+            // Удаляем связанные BuildingPanels перед удалением здания
+            var relatedPanels = _context.BuildingPanels.Where(bp => bp.BuildingId == id).ToList();
+            if (relatedPanels.Any())
+            {
+                _context.BuildingPanels.RemoveRange(relatedPanels);
+            }
+
+            _context.Building.Remove(building);
+            _context.SaveChanges();
+
+            return NoContent();
         }
     }
 }
